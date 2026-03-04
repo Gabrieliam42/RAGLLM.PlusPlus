@@ -1,19 +1,17 @@
-# RAGLLM Code PlusPlus
+# RAGLLM.PlusPlus
 
-Local RAG pipeline for code-focused question answering, using dual embedding models and a reasoning LLM.
-It uses Facebook AI Similarity Search FAISS.
+Local RAG pipeline with dual embedding models and vLLM inference. Two script variants — one code-focused, one English-focused.
 
 ---
 
-## Models
+## Scripts
 
-| Role | Model |
-|---|---|
-| Embedder 1 | `nomic-ai/CodeRankEmbed` |
-| Embedder 2 | `BAAI/bge-code-v1` |
-| LLM | `nvidia/OpenCodeReasoning-Nemotron-1.1-7B` |
+| Script | Embedder 1 | Embedder 2 | LLM | Focus |
+|---|---|---|---|---|
+| `RAGLLM_Code_Plus_Plus.py` | `nomic-ai/CodeRankEmbed` | `BAAI/bge-code-v1` | `nvidia/OpenCodeReasoning-Nemotron-1.1-7B` | Code / technical |
+| `RAGLLM_English_Plus_Plus.py` | `BAAI/bge-m3` | `nomic-ai/nomic-embed-text-v2-moe` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | English / general |
 
-Embeddings from both models are concatenated and L2-normalized (dual-embed / `concat_l2norm`), producing higher-recall retrieval than a single embedder.
+Both scripts use dual-embed retrieval: embeddings from both models are concatenated and L2-normalized (`concat_l2norm`), producing higher-recall retrieval than a single embedder.
 
 ---
 
@@ -24,7 +22,7 @@ Embeddings from both models are concatenated and L2-normalized (dual-embed / `co
 - 16+ GB RAM (128 GB recommended for large document sets)
 
 **OS**
-- Linux only (`Ubuntu` or WSL2)
+- Linux only (Ubuntu or WSL2)
 
 **Python**
 - 3.12+
@@ -64,10 +62,12 @@ pip install vllm==0.10.1 --extra-index-url https://download.pytorch.org/whl/cu12
 
 ## Usage
 
-Place your documents in a `data/` directory (created in the working directory), then run:
+Place your documents in a `data/` directory, then run either script:
 
 ```bash
 python RAGLLM_Code_Plus_Plus.py
+# or
+python RAGLLM_English_Plus_Plus.py
 ```
 
 A desktop GUI (tkinter) will open. On first run, models are downloaded from Hugging Face into `models/` under the working directory. Subsequent runs reuse local files.
@@ -80,7 +80,19 @@ A desktop GUI (tkinter) will open. On first run, models are downloaded from Hugg
 
 ---
 
-## Pipeline
+## RAGLLM_Code_Plus_Plus.py
+
+Code and technical document retrieval using two code-specialized embedding models and a reasoning LLM.
+
+### Models
+
+| Role | Model |
+|---|---|
+| Embedder 1 | `nomic-ai/CodeRankEmbed` |
+| Embedder 2 | `BAAI/bge-code-v1` |
+| LLM | `nvidia/OpenCodeReasoning-Nemotron-1.1-7B` |
+
+### Pipeline
 
 ```
 data/ files
@@ -92,24 +104,79 @@ data/ files
                         └─► answer
 ```
 
+### Defaults
+
+| Setting | Value |
+|---|---|
+| Top K | 5 |
+| Max New Tokens | 4096 |
+| Temperature | 0.1 |
+| Embed batch size | 4 |
+| Index cache | `data/.rag_cache_code_plus_plus/` |
+| Session log | `RAGLLM_Code_Plus_Plus_Session.txt` |
+
+> `PYTORCH_CUDA_ALLOC_CONF` is set to `""` to prevent CUDA graph handle conflicts between PyTorch embedding inference and vLLM.
+
+---
+
+## RAGLLM_English_Plus_Plus.py
+
+English and general-purpose document retrieval using a multilingual embedding model paired with a MoE text embedder, and a general-purpose Nemotron LLM.
+
+### Models
+
+| Role | Model |
+|---|---|
+| Embedder 1 | `BAAI/bge-m3` |
+| Embedder 2 | `nomic-ai/nomic-embed-text-v2-moe` |
+| LLM | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` |
+
+### Pipeline
+
+```
+data/ files
+    └─► chunk (1200 chars, 180 overlap)
+        └─► embed: bge-m3 + nomic-embed-text-v2-moe → concat + L2-normalize
+            └─► FAISS IndexFlatIP (GPU/cuVS if available)
+                └─► top-K retrieval
+                    └─► prompt → vLLM (Llama-3.1-Nemotron-Nano-8B-v1)
+                        └─► answer
+```
+
+### Defaults
+
+| Setting | Value |
+|---|---|
+| Top K | 7 |
+| Max New Tokens | 4096 |
+| Temperature | 0.7 |
+| Embed batch size | 4 |
+| Index cache | `data/.rag_cache_english_plus_plus/` |
+| Session log | `RAGLLM_English_Plus_Plus_Session.txt` |
+
+> `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reduce VRAM fragmentation during embedding inference.
+
+---
+
+## Shared Pipeline Details
+
 ### Embedding
 - Both models run on CUDA (CPU embedding is rejected)
 - Vectors are L2-normalized on GPU via `torch.nn.functional.normalize` before CPU transfer
 - Concatenated dual-embed vectors are re-normalized after concatenation
-- `EMBED_MAX_LENGTH=1024` tokens, `RAG_EMBED_BATCH` default `4`
+- `EMBED_MAX_LENGTH=1024` tokens
 
 ### FAISS Index
 - Index type: `IndexFlatIP` (exact inner-product / cosine similarity on L2-normalized vectors)
 - GPU promotion: `StandardGpuResources` + float16 cloner options
 - cuVS acceleration auto-detected at runtime (`faiss-gpu-cu12-cuvs`)
-- Index cached to `data/.rag_cache_code_plus_plus/` — reused across runs if documents are unchanged
+- Index cached per script — reused across runs if documents are unchanged
 
 ### LLM (vLLM)
 - Backend: vLLM 0.10.1 with PagedAttention
 - dtype: `bfloat16` on Ampere, `float16` fallback
 - `gpu_memory_utilization=0.88` (~20.2 GiB on RTX 3090)
 - On OOM: retries with `gpu_memory_utilization=0.73`, `cpu_offload_gb=16`, `enforce_eager=True`
-- `PYTORCH_CUDA_ALLOC_CONF` is set to `""` to prevent CUDA graph handle conflicts between the PyTorch embedding inference and vLLM
 
 ### Document ingestion
 Supported file types: `.py`, `.js`, `.ts`, `.java`, `.c`, `.cpp`, `.go`, `.rs`, `.md`, `.txt`, `.json`, `.yaml`, `.toml`, `.csv`, `.log`, `.rst`, `.html`, `.docx`, `.doc`, and more.
@@ -120,7 +187,7 @@ Supported file types: `.py`, `.js`, `.ts`, `.java`, `.c`, `.cpp`, `.go`, `.rs`, 
 
 ## Configuration
 
-Environment variables (all optional):
+Environment variables (all optional, apply to both scripts):
 
 | Variable | Default | Description |
 |---|---|---|
@@ -128,8 +195,6 @@ Environment variables (all optional):
 | `RAG_MAX_MODEL_LEN` | `4096` | Maximum token context length |
 | `RAG_CPU_OFFLOAD_GB` | `0` | GB to offload to CPU RAM (0 = disabled) |
 | `RAG_EMBED_BATCH` | `4` | Embedding batch size |
-
-GUI defaults: **Top K=5**, **Max New Tokens=4096**, **Temperature=0.1**
 
 ---
 
@@ -146,14 +211,17 @@ Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) — 
 
 ```
 .
-├── RAGLLM_Code_Plus_Plus.py   # Main script
+├── RAGLLM_Code_Plus_Plus.py          # Code-focused script
+├── RAGLLM_English_Plus_Plus.py       # English-focused script
 ├── requirements.txt
-├── data/                      # Place documents here
-│   └── .rag_cache_code_plus_plus/   # Auto-generated index cache
-├── models/                    # Auto-populated on first run
+├── data/                             # Place documents here
+│   ├── .rag_cache_code_plus_plus/    # Auto-generated (Code++ script)
+│   └── .rag_cache_english_plus_plus/ # Auto-generated (English++ script)
+├── models/                           # Auto-populated on first run
 │   ├── embeddings/
 │   └── llm/
-└── RAGLLM_Code_Plus_Plus_Session.txt  # Auto-generated session log
+├── RAGLLM_Code_Plus_Plus_Session.txt    # Auto-generated session log
+└── RAGLLM_English_Plus_Plus_Session.txt # Auto-generated session log
 ```
 
 ---
@@ -163,4 +231,5 @@ Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) — 
 - Linux only — hard exits on non-Linux platforms
 - WSL2: Ctrl+C in the GUI copies to the Windows clipboard via `clip.exe`
 - Model files are downloaded to `models/` in the working directory, not the global HF cache
+- Each script has its own index cache and session log — they can run independently without conflict
 - Session log appended after each query with timestamp, question, and answer
