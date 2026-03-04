@@ -1,4 +1,4 @@
-# RAGLLM Code++
+# RAGLLM Code PlusPlus
 
 Local RAG pipeline for code-focused question answering, using dual embedding models and a reasoning LLM.
 
