@@ -25,7 +25,7 @@ _HF_MODULES_CACHE = (_CWD / "models" / ".hf_modules").resolve()
 os.environ.setdefault("HF_HOME", str(_HF_HOME))
 os.environ.setdefault("HF_HUB_CACHE", str(_HF_HUB_CACHE))
 os.environ.setdefault("HF_MODULES_CACHE", str(_HF_MODULES_CACHE))
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "")
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
