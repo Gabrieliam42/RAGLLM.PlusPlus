@@ -154,7 +154,7 @@ data/ files
 | Index cache | `data/.rag_cache_english_plus_plus/` |
 | Session log | `RAGLLM_English_Plus_Plus_Session.txt` |
 
-> `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reduce VRAM fragmentation during embedding inference.
+> `PYTORCH_CUDA_ALLOC_CONF` is set to `""` to prevent CUDA graph handle conflicts between PyTorch embedding inference and vLLM.
 
 ---
 
