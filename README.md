@@ -175,7 +175,7 @@ data/ files
 ### LLM (vLLM)
 - Backend: vLLM 0.10.1 with PagedAttention
 - dtype: `bfloat16` on Ampere, `float16` fallback
-- `gpu_memory_utilization=0.88` (~20.2 GiB on RTX 3090)
+- `gpu_memory_utilization=0.88` (~20.2 GiB)
 - On OOM: retries with `gpu_memory_utilization=0.73`, `cpu_offload_gb=16`, `enforce_eager=True`
 
 ### Document ingestion
