@@ -62,7 +62,7 @@ pip install vllm==0.10.1 --extra-index-url https://download.pytorch.org/whl/cu12
 
 ## Usage
 
-Place your documents in a `data/` directory, then run either script:
+Create a `data/` directory in the same directory as the script (the working directory) and place your documents inside it, then run either script:
 
 ```bash
 python RAGLLM_Code_Plus_Plus.py
