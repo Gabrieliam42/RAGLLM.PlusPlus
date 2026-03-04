@@ -233,3 +233,8 @@ Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) - an
 - Model files are downloaded to `models/` in the working directory, not the global HF cache
 - Each script has its own index cache and session log - they can run independently without conflict
 - Session log appended after each query with timestamp, question, and answer
+
+
+
+# Script Developer: Gabriel Mihai Sandu
+# GitHub Profile: https://github.com/Gabrieliam42
