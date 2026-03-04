@@ -18,8 +18,8 @@ Both scripts use dual-embed retrieval: embeddings from both models are concatena
 ## Requirements
 
 **Hardware**
-- NVIDIA GPU with CUDA 12.x, Ampere or newer (developed and tested on RTX 3090 24 GB)
-- 16+ GB RAM (128 GB recommended for large document sets)
+- NVIDIA GPU with CUDA 12.x, Ampere or newer
+- 16+ GB RAM
 
 **OS**
 - Linux only (Ubuntu or WSL2)
