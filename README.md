@@ -1,6 +1,6 @@
 # RAGLLM.PlusPlus
 
-Local RAG pipeline with dual embedding models and vLLM inference. Two script variants — one code-focused, one English-focused.
+Local RAG pipeline with dual embedding models and vLLM inference. Two script variants - one code-focused, one English-focused.
 
 ---
 
@@ -75,7 +75,7 @@ A desktop GUI (tkinter) will open. On first run, models are downloaded from Hugg
 **GUI workflow:**
 1. Engine starts in background: loads embedders → builds/loads FAISS index → loads LLM
 2. Type a question in the input field
-3. Click **Ask** — top-K chunks are retrieved and passed to the LLM as context
+3. Click **Ask** - top-K chunks are retrieved and passed to the LLM as context
 4. The answer and retrieved source chunks are displayed
 
 ---
@@ -170,7 +170,7 @@ data/ files
 - Index type: `IndexFlatIP` (exact inner-product / cosine similarity on L2-normalized vectors)
 - GPU promotion: `StandardGpuResources` + float16 cloner options
 - cuVS acceleration auto-detected at runtime (`faiss-gpu-cu12-cuvs`)
-- Index cached per script — reused across runs if documents are unchanged
+- Index cached per script - reused across runs if documents are unchanged
 
 ### LLM (vLLM)
 - Backend: vLLM 0.10.1 with PagedAttention
@@ -200,7 +200,7 @@ Environment variables (all optional, apply to both scripts):
 
 ## FAISS Package
 
-Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) — an unofficial pip wheel for FAISS 1.14.0 with GPU + NVIDIA cuVS support, not available in the official `faiss-gpu-cu12` package.
+Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) - an unofficial pip wheel for FAISS 1.14.0 with GPU + NVIDIA cuVS support, not available in the official `faiss-gpu-cu12` package.
 
 - PyPI: https://pypi.org/project/faiss-gpu-cu12-cuvs/
 - GitHub: https://github.com/Gabrieliam42/faiss-gpu-cu12-cuvs
@@ -228,8 +228,8 @@ Uses [`faiss-gpu-cu12-cuvs`](https://pypi.org/project/faiss-gpu-cu12-cuvs/) — 
 
 ## Notes
 
-- Linux only — hard exits on non-Linux platforms
+- Linux only - hard exits on non-Linux platforms
 - WSL2: Ctrl+C in the GUI copies to the Windows clipboard via `clip.exe`
 - Model files are downloaded to `models/` in the working directory, not the global HF cache
-- Each script has its own index cache and session log — they can run independently without conflict
+- Each script has its own index cache and session log - they can run independently without conflict
 - Session log appended after each query with timestamp, question, and answer
