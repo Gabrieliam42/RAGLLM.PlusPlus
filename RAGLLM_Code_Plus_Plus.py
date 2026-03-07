@@ -1,6 +1,3 @@
-# Script Developer: Gabriel Mihai Sandu
-# GitHub Profile: https://github.com/Gabrieliam42
-
 import gc
 import hashlib
 import json
@@ -26,42 +23,56 @@ os.environ.setdefault("HF_HUB_CACHE", str(_HF_HUB_CACHE))
 os.environ.setdefault("HF_MODULES_CACHE", str(_HF_MODULES_CACHE))
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "")
 
-import numpy as np  # noqa: E402
-import torch  # noqa: E402
-from huggingface_hub import snapshot_download  # noqa: E402
+import numpy as np  
+
+import torch  
+
+from huggingface_hub import snapshot_download  
+
 
 for _tk_env in ("TCL_LIBRARY", "TK_LIBRARY", "TCLLIBPATH"):
     os.environ.pop(_tk_env, None)
 
 try:
-    import tkinter as tk  # noqa: E402
-    from tkinter import ttk  # noqa: E402
-    from tkinter.scrolledtext import ScrolledText  # noqa: E402
-except ImportError as exc:  # pragma: no cover
-    tk = None  # type: ignore[assignment]
-    ttk = None  # type: ignore[assignment]
-    ScrolledText = object  # type: ignore[assignment]
+    import tkinter as tk  
+
+    from tkinter import ttk  
+
+    from tkinter.scrolledtext import ScrolledText  
+
+except ImportError as exc:  
+
+    tk = None  
+
+    ttk = None  
+
+    ScrolledText = object  
+
     _TK_IMPORT_ERROR = exc
 else:
     _TK_IMPORT_ERROR = None
 
 try:
-    import faiss  # type: ignore
-except ImportError as exc:  # pragma: no cover
+    import faiss  
+
+except ImportError as exc:  
+
     raise SystemExit(
         "Missing dependency: faiss. Install faiss-cpu or faiss-gpu."
     ) from exc
 
 try:
     from transformers import AutoModel, AutoTokenizer
-except ImportError as exc:  # pragma: no cover
+except ImportError as exc:  
+
     raise SystemExit(
         "Missing dependency: transformers. Install: pip install transformers accelerate sentencepiece"
     ) from exc
 
 try:
     from vllm import LLM, SamplingParams
-except ImportError as exc:  # pragma: no cover
+except ImportError as exc:  
+
     raise SystemExit(
         "Missing dependency: vllm. Build from source: see PROJECT.md"
     ) from exc
@@ -274,7 +285,8 @@ def _iter_text_files(root_dir: Path) -> Iterable[Path]:
 
 def _read_docx(path: Path) -> str | None:
     try:
-        from docx import Document  # type: ignore
+        from docx import Document  
+
     except ImportError:
         return None
 
@@ -1248,7 +1260,8 @@ class RAGApp:
                     self.status_var.set(message)
                     self._update_indexing_status(message)
             elif kind == "answer":
-                answer, contexts = payload  # type: ignore[misc]
+                answer, contexts = payload  
+
                 self.answer_box.delete("1.0", "end")
                 self.answer_box.insert("1.0", answer)
 
