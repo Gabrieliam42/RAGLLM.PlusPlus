@@ -14,7 +14,7 @@ Local RAG pipeline with dual embedding models and LLM inference. Scripts come in
 | `RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_LLAMA-CPP.py` | llama-cpp-python | `BAAI/bge-m3` | `nomic-ai/nomic-embed-text-v2-moe` | `nvidia_Llama-3.1-Nemotron-Nano-8B-v1-bf16.gguf` | English / general |
 | `RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_VLLM.py` | vLLM | `BAAI/bge-m3` | `nomic-ai/nomic-embed-text-v2-moe` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | English / general |
 
-Both scripts use dual-embed retrieval: embeddings from both models are concatenated and L2-normalized (`concat_l2norm`), producing higher-recall retrieval than a single embedder.
+All scripts use dual-embed retrieval: embeddings from both models are concatenated and L2-normalized (`concat_l2norm`), producing higher-recall retrieval than a single embedder.
 
 ---
 
