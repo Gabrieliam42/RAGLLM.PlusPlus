@@ -1,6 +1,3 @@
-# Script Developer: Gabriel Mihai Sandu
-# GitHub Profile: https://github.com/Gabrieliam42
-
 import gc
 import hashlib
 import json
@@ -17,7 +14,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterable
 
-# Keep Hugging Face caches inside CWD (not global user cache locations).
 _CWD = Path.cwd()
 _HF_HOME = (_CWD / "models" / ".hf_home").resolve()
 _HF_HUB_CACHE = (_CWD / "models" / ".hf_hub_cache").resolve()
@@ -31,7 +27,6 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 from huggingface_hub import snapshot_download  # noqa: E402
 
-# Process-level Tk isolation: ignore inherited Tcl/Tk override env vars.
 for _tk_env in ("TCL_LIBRARY", "TK_LIBRARY", "TCLLIBPATH"):
     os.environ.pop(_tk_env, None)
 
@@ -865,7 +860,7 @@ class RAGEngine:
         self.status_cb(f"Loading LLM: {model_dir}")
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA GPU is required for LLM loading.")
-        torch.cuda.empty_cache()  # free embedder cached allocs before vLLM CUDA graph capture
+        torch.cuda.empty_cache()
 
         dtype = "bfloat16" if torch.cuda.is_bf16_supported() else "float16"
         _stop = self._start_llm_load_monitor(model_dir)
@@ -895,7 +890,7 @@ class RAGEngine:
                     max_model_len=LLM_MAX_MODEL_LEN,
                     cpu_offload_gb=16.0,
                     trust_remote_code=True,
-                    enforce_eager=True,  # required when cpu_offload_gb > 0
+                    enforce_eager=True,
                 )
                 self.status_cb("LLM loaded with CPU offload.")
         finally:
@@ -1142,7 +1137,6 @@ class RAGApp:
         self._llm_progress_label = ttk.Label(_pbar_frame, text="  0%", width=5)
         self._llm_progress_label.pack(side="left", padx=(6, 0))
 
-        # Bridge X11 clipboard to Windows clipboard on Ctrl+C / <<Copy>>
         def _sync_win_clipboard(event: object) -> None:
             try:
                 w = self.root.focus_get()
