@@ -21,7 +21,6 @@ All scripts use dual-embed retrieval: embeddings from both models are concatenat
 ---
 
 ## Requirements
-
 **Hardware**
 - NVIDIA GPU with CUDA 12.x, Ampere or newer
 - 16+ GB RAM
