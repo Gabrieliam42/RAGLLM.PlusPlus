@@ -5,6 +5,7 @@ numpy>=1.26
 transformers>=4.46,<5.0  # vllm 0.10.1 incompatible with transformers 5.x (all_special_tokens_extended removed)
 huggingface-hub>=0.26
 accelerate>=1.0
+sentence-transformers>=5.2.3
 sentencepiece>=0.2.0
 einops>=0.8.0
 # faiss-gpu-cu12-cuvs — requires RAPIDS deps first:
@@ -14,7 +15,9 @@ bitsandbytes>=0.49.2; platform_system == "Linux"
 causal-conv1d>=1.6.0; platform_system == "Linux"
 mamba-ssm>=2.3.0; platform_system == "Linux"
 python-docx>=1.1.2
-# pip install flash-attn prebuilt wheels: https://github.com/mjun0812/flash-attention-prebuild-wheels
+# flash-attn prebuilt wheels (official): https://github.com/Dao-AILab/flash-attention/releases/tag/v2.8.3
+# Example for this stack (Linux x86_64, Python 3.12, torch 2.7, CUDA 12, cxx11abi TRUE):
+# pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.7cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
 flash-attn>=2.8.3; platform_system == "Linux"
 # vllm install: pip install vllm==0.10.1 --extra-index-url https://download.pytorch.org/whl/cu128
 # vllm==0.10.1; platform_system == "Linux"
