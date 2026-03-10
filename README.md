@@ -16,7 +16,9 @@ Both vLLM and llama-cpp-python are inference engines: vLLM is optimized for mult
 | `RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_LLAMA-CPP.py` | llama-cpp-python | `BAAI/bge-m3` | `nomic-ai/nomic-embed-text-v2-moe` | `nvidia_Llama-3.1-Nemotron-Nano-8B-v1-bf16.gguf` | English / general |
 | `RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_VLLM.py` | vLLM | `BAAI/bge-m3` | `nomic-ai/nomic-embed-text-v2-moe` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | English / general |
 
-All scripts use dual-embed retrieval: embeddings from both models are concatenated and L2-normalized (`concat_l2norm`), producing higher-recall retrieval than a single embedder.
+All scripts use dual-embed retrieval: embeddings from both models are loaded through `SentenceTransformer`, concatenated, and L2-normalized (`concat_l2norm`), producing higher-recall retrieval than a single embedder.
+
+FlashAttention-2 is enabled for embedding models where the underlying architecture and Transformers backend support it, with automatic fallback to standard attention where FA2 is unsupported.
 
 ---
 
@@ -61,33 +63,3 @@ pip install -r requirements.txt
 pip install vllm==0.10.1 --extra-index-url https://download.pytorch.org/whl/cu128
 ```
 > vLLM is not in `requirements.txt` due to its build complexity. Requires `transformers>=4.46,<5.0` (already pinned in requirements).
-
-**For llama-cpp-python scripts** (`_LLAMA-CPP.py`):
-```bash
-pip install https://github.com/abetlen/ggml-python/releases/download/v0.0.37-cu124/ggml_python-0.0.37-cp312-cp312-linux_x86_64.whl
-pip install https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.16-cu124/llama_cpp_python-0.3.16-cp312-cp312-linux_x86_64.whl
-```
-> Pre-built CUDA 12.4 wheels for Python 3.12 Linux. GGUF models are downloaded automatically from Hugging Face on first run.
-
----
-
-## Usage
-
-Create a `data/` directory in the same directory as the script (the working directory) and place your documents inside it, then run either script:
-
-```bash
-python RAGLLM_Code_Reasoning-Nemotron-1.1-7B_LLAMA-CPP.py
-# or
-python RAGLLM_Code_Reasoning-Nemotron-1.1-7B_VLLM.py
-# or
-python RAGLLM_English_GLM-4.7-Flash-Q4_1_LLAMA-CPP.py
-# or
-python RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_LLAMA-CPP.py
-# or
-python RAGLLM_English_Llama-3.1-Nemotron-Nano-8B-v1_VLLM.py
-```
-
-A desktop GUI (tkinter) will open. On first run, models are downloaded from Hugging Face into `models/` under the working directory. Subsequent runs reuse local files.
-
-**GUI workflow:**
-
