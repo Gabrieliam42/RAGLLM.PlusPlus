@@ -1,6 +1,6 @@
 # RAGLLM.PlusPlus
 
-Local RAG pipeline with dual embedding models and LLM inference. Scripts come in two backend variants: **vLLM** (safetensors, GPU half/bfloat16 inference) OR **llama-cpp-python** (GGUF format).
+Local RAG pipeline with dual embedding models and LLM inference. Scripts come in two backend variants: **vLLM** (safetensors, GPU half/bfloat16 inference) OR **llama-cpp-python + ggml-python** (GGUF format).
 
 Both vLLM and llama-cpp-python are inference engines: vLLM is optimized for multi-user high-throughput production, while llama-cpp-python prioritizes portability for single-user workloads.
 
