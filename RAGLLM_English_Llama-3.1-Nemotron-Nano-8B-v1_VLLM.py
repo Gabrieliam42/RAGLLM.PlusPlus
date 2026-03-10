@@ -23,56 +23,42 @@ os.environ.setdefault("HF_HUB_CACHE", str(_HF_HUB_CACHE))
 os.environ.setdefault("HF_MODULES_CACHE", str(_HF_MODULES_CACHE))
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "")
 
-import numpy as np  
-
-import torch  
-
-from huggingface_hub import snapshot_download  
-
+import numpy as np
+import torch
+from huggingface_hub import snapshot_download
 
 for _tk_env in ("TCL_LIBRARY", "TK_LIBRARY", "TCLLIBPATH"):
     os.environ.pop(_tk_env, None)
 
 try:
-    import tkinter as tk  
-
-    from tkinter import ttk  
-
-    from tkinter.scrolledtext import ScrolledText  
-
-except ImportError as exc:  
-
-    tk = None  
-
-    ttk = None  
-
-    ScrolledText = object  
-
+    import tkinter as tk
+    from tkinter import ttk
+    from tkinter.scrolledtext import ScrolledText
+except ImportError as exc:
+    tk = None
+    ttk = None
+    ScrolledText = object
     _TK_IMPORT_ERROR = exc
 else:
     _TK_IMPORT_ERROR = None
 
 try:
-    import faiss  
-
-except ImportError as exc:  
-
+    import faiss
+except ImportError as exc:
     raise SystemExit(
         "Missing dependency: faiss. Install faiss-cpu or faiss-gpu."
     ) from exc
 
 try:
-    from transformers import AutoModel, AutoTokenizer
-except ImportError as exc:  
-
+    from sentence_transformers import SentenceTransformer
+except ImportError as exc:
     raise SystemExit(
-        "Missing dependency: transformers. Install: pip install transformers accelerate sentencepiece"
+        "Missing dependency: sentence-transformers. Install: pip install sentence-transformers"
     ) from exc
 
 try:
     from vllm import LLM, SamplingParams
-except ImportError as exc:  
-
+except ImportError as exc:
     raise SystemExit(
         "Missing dependency: vllm. Build from source: see PROJECT.md"
     ) from exc
@@ -125,11 +111,17 @@ NOMIC_TEXT_EMBED_SUPPORT_REPO = "nomic-ai/nomic-bert-2048"
 NOMIC_TEXT_EMBED_REQUIRED_FILES = (
     "config.json",
     "model.safetensors",
+    "modules.json",
     "tokenizer.json",
 )
 NOMIC_TEXT_EMBED_SUPPORT_FILES = (
     "configuration_hf_nomic_bert.py",
     "modeling_hf_nomic_bert.py",
+)
+SENTENCE_TRANSFORMER_REQUIRED_FILES = (
+    "config.json",
+    "modules.json",
+    "tokenizer.json",
 )
 LLM_MODEL_NAME = "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
 RAG_CACHE_DIRNAME = ".rag_cache_english_plus_plus"
@@ -145,7 +137,7 @@ LLM_CPU_OFFLOAD_GB = float(os.getenv("RAG_CPU_OFFLOAD_GB", "0"))
 
 DOC_PREFIX = "search_document: "
 QUERY_PREFIX = "search_query: "
-SESSION_LOG_FILENAME = "RAGLLM_English_Plus_Plus_Session.txt"
+SESSION_LOG_FILENAME = Path(__file__).stem + ".txt"
 
 COLOR_BG = "#17191C"
 COLOR_PANEL = "#1D2024"
@@ -285,8 +277,7 @@ def _iter_text_files(root_dir: Path) -> Iterable[Path]:
 
 def _read_docx(path: Path) -> str | None:
     try:
-        from docx import Document  
-
+        from docx import Document
     except ImportError:
         return None
 
@@ -531,13 +522,36 @@ def _ensure_nomic_text_embed_local_support(model_dir: Path, status_cb: Callable[
         status_cb(f"Patched {NOMIC_TEXT_EMBED_MODEL_NAME} config for local-only remote code.")
 
 
+def _embedding_dtype(device: torch.device) -> torch.dtype:
+    if device.type != "cuda":
+        return torch.float32
+    return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+
+
+def _embedding_model_kwargs(device: torch.device) -> tuple[dict[str, object], str]:
+    model_kwargs: dict[str, object] = {
+        "dtype": _embedding_dtype(device),
+        "low_cpu_mem_usage": True,
+    }
+    if device.type != "cuda":
+        return model_kwargs, "default attention"
+    major, minor = torch.cuda.get_device_capability(0)
+    if major < 8:
+        return model_kwargs, f"default attention (SM {major}.{minor})"
+    try:
+        __import__("flash_attn")
+    except ImportError:
+        return model_kwargs, "default attention (flash-attn missing)"
+    model_kwargs["attn_implementation"] = "flash_attention_2"
+    return model_kwargs, "flash_attention_2"
+
+
 class Embedder:
     def __init__(self, status_cb: Callable[[str], None]) -> None:
         self.status_cb = status_cb
         self.device = self._select_device()
         self.batch_size = int(os.getenv("RAG_EMBED_BATCH", "4"))
         self.runtimes: list[EmbedModelRuntime] = []
-        dtype = torch.float16 if self.device.type == "cuda" else torch.float32
         for model_name in EMBED_MODEL_NAMES:
             if model_name == NOMIC_TEXT_EMBED_MODEL_NAME:
                 model_dir = _ensure_local_model(
@@ -554,28 +568,14 @@ class Embedder:
                     "embeddings",
                     self.status_cb,
                     local_only_if_present=True,
-                    required_files=("config.json", "tokenizer.json"),
+                    required_files=SENTENCE_TRANSFORMER_REQUIRED_FILES,
                 )
-            self.status_cb(f"Loading embedding model on {self.device.type}: {model_dir}")
-            tokenizer = AutoTokenizer.from_pretrained(
-                str(model_dir),
-                trust_remote_code=True,
-                local_files_only=True,
-            )
-            model = AutoModel.from_pretrained(
-                str(model_dir),
-                trust_remote_code=True,
-                dtype=dtype,
-                low_cpu_mem_usage=True,
-                local_files_only=True,
-            )
-            model.to(self.device)
-            model.eval()
+            model = self._load_sentence_transformer(model_name, model_dir)
             self.runtimes.append(
                 EmbedModelRuntime(
                     name=model_name,
                     model_dir=model_dir,
-                    tokenizer=tokenizer,
+                    tokenizer=None,
                     model=model,
                 )
             )
@@ -592,6 +592,36 @@ class Embedder:
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA GPU is required. Install NVIDIA driver/CUDA and use a CUDA-enabled environment.")
         return torch.device("cuda")
+
+    def _load_sentence_transformer(self, model_name: str, model_dir: Path) -> SentenceTransformer:
+        model_kwargs, attn_label = _embedding_model_kwargs(self.device)
+        self.status_cb(f"Loading embedding model on {self.device.type} ({attn_label}): {model_dir}")
+        try:
+            model = SentenceTransformer(
+                str(model_dir),
+                device=self.device.type,
+                trust_remote_code=True,
+                local_files_only=True,
+                model_kwargs=model_kwargs,
+            )
+        except Exception as exc:
+            if model_kwargs.get("attn_implementation") != "flash_attention_2":
+                raise
+            fallback_kwargs = dict(model_kwargs)
+            fallback_kwargs.pop("attn_implementation", None)
+            self.status_cb(
+                f"flash_attention_2 unavailable for {model_name} ({exc}). Retrying with default attention."
+            )
+            model = SentenceTransformer(
+                str(model_dir),
+                device=self.device.type,
+                trust_remote_code=True,
+                local_files_only=True,
+                model_kwargs=fallback_kwargs,
+            )
+        model.max_seq_length = EMBED_MAX_LENGTH
+        model.eval()
+        return model
 
     def _pool_embeddings(self, model_out: object, attention_mask: torch.Tensor) -> torch.Tensor:
         if torch.is_tensor(model_out):
@@ -617,18 +647,14 @@ class Embedder:
         return summed / denom
 
     def _encode_with_runtime(self, runtime: EmbedModelRuntime, texts: list[str]) -> np.ndarray:
-        encoded = runtime.tokenizer(
+        vectors = runtime.model.encode(
             texts,
-            padding=True,
-            truncation=True,
-            max_length=EMBED_MAX_LENGTH,
-            return_tensors="pt",
+            batch_size=self.batch_size,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
         )
-        encoded = {k: v.to(self.device) for k, v in encoded.items()}
-        with torch.inference_mode():
-            out = runtime.model(**encoded)
-            vectors = self._pool_embeddings(out, encoded["attention_mask"])
-        return torch.nn.functional.normalize(vectors.float(), dim=1).detach().cpu().numpy()
+        return np.asarray(vectors, dtype=np.float32)
 
     def _encode(self, texts: list[str]) -> np.ndarray:
         per_model_vectors: list[np.ndarray] = []
@@ -1260,8 +1286,7 @@ class RAGApp:
                     self.status_var.set(message)
                     self._update_indexing_status(message)
             elif kind == "answer":
-                answer, contexts = payload  
-
+                answer, contexts = payload
                 self.answer_box.delete("1.0", "end")
                 self.answer_box.insert("1.0", answer)
 
