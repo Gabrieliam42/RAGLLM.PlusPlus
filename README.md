@@ -8,7 +8,7 @@ Both vLLM and llama-cpp-python are inference engines: vLLM is optimized for mult
 
 ## Scripts
 
-| Script | Backend | Embedder 1 | Embedder 2 | LLM | Focus |
+| Script | Backend | Embedder1 | Embedder2 | LLM | Focus |
 |---|---|---|---|---|---|
 | `RAGLLM_Code_Reasoning-Nemotron-1.1-7B_LLAMA-CPP.py` | llama-cpp-python | `nomic-ai/CodeRankEmbed` | `BAAI/bge-code-v1` | `OpenCodeReasoning-Nemotron-1.1-7B-F16.gguf` | Code / technical |
 | `RAGLLM_Code_Reasoning-Nemotron-1.1-7B_VLLM.py` | vLLM | `nomic-ai/CodeRankEmbed` | `BAAI/bge-code-v1` | `nvidia/OpenCodeReasoning-Nemotron-1.1-7B` | Code / technical |
